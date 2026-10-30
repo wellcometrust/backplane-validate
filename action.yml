@@ -1,0 +1,45 @@
+# Published to wellcometrust/backplane-validate by .github/workflows/release-bp.yml
+# in wellcometrust/backplane, which fills in the version default below.
+name: Backplane validate
+description: Check Backplane manifest.yml and rfcs.yml files with bp validate
+inputs:
+  path:
+    description: Directory to check. Every manifest.yml and rfcs.yml under it is validated.
+    default: "."
+  org:
+    description: Set to "true" when path is a whole org (backplane-config/ and team repos) to run the org-level checks too.
+    default: "false"
+  version:
+    description: The bp release to download. Defaults to the release this action was published with.
+    default: "0.1.0"
+runs:
+  using: composite
+  steps:
+    - name: bp validate
+      shell: bash
+      env:
+        BP_PATH: ${{ inputs.path }}
+        BP_ORG: ${{ inputs.org }}
+        BP_VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        case "$RUNNER_OS-$RUNNER_ARCH" in
+          Linux-X64) target=x86_64-unknown-linux-musl ;;
+          Linux-ARM64) target=aarch64-unknown-linux-musl ;;
+          macOS-ARM64) target=aarch64-apple-darwin ;;
+          *) echo "::error::bp has no build for $RUNNER_OS $RUNNER_ARCH"; exit 1 ;;
+        esac
+        base="https://github.com/wellcometrust/backplane-validate/releases/download/v$BP_VERSION"
+        dir="$RUNNER_TEMP/bp-$BP_VERSION"
+        mkdir -p "$dir"
+        curl -fsSL --retry 3 -o "$dir/bp-$target" "$base/bp-$target"
+        curl -fsSL --retry 3 -o "$dir/SHA256SUMS" "$base/SHA256SUMS"
+        # Catches a truncated or corrupted download.
+        sum=$(command -v sha256sum || echo "shasum -a 256")
+        (cd "$dir" && grep " bp-$target\$" SHA256SUMS | $sum -c -)
+        chmod +x "$dir/bp-$target"
+        if [ "$BP_ORG" = "true" ]; then
+          "$dir/bp-$target" validate --org "$BP_PATH"
+        else
+          "$dir/bp-$target" validate "$BP_PATH"
+        fi
