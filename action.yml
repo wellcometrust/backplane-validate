@@ -11,7 +11,7 @@ inputs:
     default: "false"
   version:
     description: The bp release to download. Defaults to the release this action was published with.
-    default: "0.1.0"
+    default: "0.1.1"
 runs:
   using: composite
   steps:
