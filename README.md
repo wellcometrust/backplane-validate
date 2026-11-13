@@ -7,6 +7,9 @@ A GitHub Action that checks Backplane `manifest.yml` and `rfcs.yml` files with `
 ```yaml
 name: backplane
 on: pull_request
+# The check only reads the repo.
+permissions:
+  contents: read
 jobs:
   validate:
     runs-on: ubuntu-latest
